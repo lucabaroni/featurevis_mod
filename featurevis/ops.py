@@ -454,6 +454,25 @@ class ChangeStd():
         fixed_std = x * (self.std / (x_std + 1e-9)).view(len(x), *[1, ] * (x.dim() - 1))
         return fixed_std
 
+class ChangeStats():
+    """ Change the mean and the standard deviation of input.
+
+        Arguments:
+        std (float or tensor): Desired std. If tensor, it should be the same length as x.
+        std (float or tensor): Desired mean. If tensor, it should be the same length as x.
+    """
+    def __init__(self, std, mean):
+        self.std = std
+        self.mean = mean 
+
+    @varargin
+    def __call__(self, x):
+        x_std = torch.std(x.view(len(x), -1), dim=-1)
+        x_mean = torch.mean(x.view(len(x), -1), dim=-1)
+        x_centered = x - x_mean
+        fixed_std = x_centered * (self.std / (x_std + 1e-9)).view(len(x_centered), *[1, ] * (x_centered.dim() - 1))
+        fixed_x = fixed_std + self.mean
+        return fixed_x
 
 ####################################### LOSS #############################################
 class MSE():
