@@ -290,22 +290,6 @@ class Identity():
 
 
 ############################## GRADIENT OPERATIONS #######################################
-class ChangeNorm():
-    """ Change the norm of the input.
-
-    Arguments:
-        norm (float or tensor): Desired norm. If tensor, it should be the same length as
-            x.
-    """
-    def __init__(self, norm):
-        self.norm = norm
-
-    @varargin
-    def __call__(self, x):
-        x_norm = torch.norm(x.view(len(x), -1), dim=-1)
-        renorm = x * (self.norm / x_norm).view(len(x), *[1,] * (x.dim() - 1))
-        return renorm
-
 
 class ClipRange():
     """Clip the value of x to some specified range.
@@ -473,6 +457,28 @@ class ChangeStats():
         fixed_std = x_centered * (self.std / (x_std + 1e-9)).view(len(x_centered), *[1, ] * (x_centered.dim() - 1))
         fixed_x = fixed_std + self.mean
         return fixed_x
+
+
+class ChangeNorm():
+    """ Change the norm of the input. If mean is specified norm is be computed
+     as euclidean distance of input image from image with pixels set to that value
+
+        Arguments:
+        norm (float or tensor): Desired norm.
+        mean (float or tensor): reference pixel values from which to compute distance.
+    """
+    def __init__(self, norm, mean=0):
+        self.norm = norm
+        self.mean = mean
+        
+    @varargin
+    def __call__(self, x):
+        x_centered = (x - self.mean).view(len(x), -1)
+        x_norm2 = torch.sum(x_centered**2, dim=-1, keepdim=True)
+        x_norm = torch.sqrt(x_norm2)
+        x_renorm = x_centered/(x_norm + 1e-9) * self.norm + self.mean
+        x_renorm = x_renorm.reshape(x.shape)
+        return x_renorm
 
 ####################################### LOSS #############################################
 class MSE():
